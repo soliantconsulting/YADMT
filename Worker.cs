@@ -17,12 +17,15 @@ namespace dmt
         private string password;
 
         private string dmtPath;
+        private string extraArgs;
 
         private bool running;
 
         private Thread t;
 
-        public Worker(string file, string source, string clone, string target, string username, string password, string dmtPath) {
+        private Process proc;
+
+        public Worker(string file, string source, string clone, string target, string username, string password, string dmtPath, string extraArgs) {
             this.dmtPath = dmtPath;
             this.file = escape(file);
             this.source = escape(source);
@@ -30,6 +33,7 @@ namespace dmt
             this.target = escape(target);
             this.username = escape(username);
             this.password = escape(password);
+            this.extraArgs = extraArgs;
         }
 
         private static string escape(string raw) {
@@ -39,16 +43,18 @@ namespace dmt
 
         public void ThreadProc() {
             String outFileName = file + ".txt";
-            File.Create(outFileName).Dispose();
+            try {
+                if (!File.Exists(outFileName)) {
+                    File.Create(outFileName).Dispose();
+                }
 
-            using (Process proc = new Process()) {
-                //sw.AutoFlush = true;
+                proc = new Process();
                 proc.StartInfo.UseShellExecute = false;
                 proc.StartInfo.FileName = this.dmtPath;
                 proc.StartInfo.CreateNoWindow = true;
                 proc.StartInfo.RedirectStandardOutput = true;
                 proc.StartInfo.Arguments = "-src_path \""+source+"\" -clone_path \""+clone+"\" -target_path \""+target+"\"" +
-                    " -src_account \""+username+"\" -src_pwd \""+password+"\" -clone_account \""+username+"\" -clone_pwd \""+password+"\" -v -force";
+                    " -src_account \""+username+"\" -src_pwd \""+password+"\" -clone_account \""+username+"\" -clone_pwd \""+password+"\" -v "+extraArgs;
                 proc.Start();
                 Console.WriteLine(file + " - " + DateTime.Now.ToString("HH:mm:ss") + " - Started");
                 StreamReader reader = proc.StandardOutput;
@@ -62,6 +68,10 @@ namespace dmt
                     File.AppendAllText(outFileName,DateTime.Now.ToString("HH:mm:ss") + " - " + line + "\r\n");
                     
                 }
+            } catch (Exception e) {
+                running = false;
+                Console.Beep(800, 200);
+                throw e;
             }
             running = false;
             Console.Beep(800, 200);
@@ -69,7 +79,8 @@ namespace dmt
 
         void IDisposable.Dispose()
         {
-            
+            proc.Dispose();
+            t.Abort();
         }
 
         public bool isRunning() {

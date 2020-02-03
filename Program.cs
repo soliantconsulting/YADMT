@@ -14,7 +14,13 @@ namespace dmt
         static void Main(string[] args)
         {
             string dmtPath = FindDMT();
-            Console.WriteLine(dmtPath);
+            if (dmtPath == null) {
+                Console.WriteLine("failed to find FMDataMigration.exe");
+                return;
+            }
+            Console.WriteLine("Found Data Migration tool at - " + dmtPath);
+            Console.Write("Extra DMT args: ");
+            string extraArgs = Console.ReadLine();
             int procCnt = getProccessCount();
             Console.Write("Username: ");
             string username = Console.ReadLine();
@@ -22,6 +28,7 @@ namespace dmt
             Console.Write("Password: ");
             string password = ReadPassword();
             Console.Write("\n");
+
 
             
             string[] files = Directory.GetFiles("source", "*.fmp12", SearchOption.TopDirectoryOnly);
@@ -32,7 +39,7 @@ namespace dmt
             while (true) {
                 for (int i = 0; i < procCnt; i++) {
                     if (workers[i] == null && fileIndex < files.Length) {
-                        workers[i] = GetWorker(files[fileIndex++], username, password, dmtPath);
+                        workers[i] = GetWorker(files[fileIndex++], username, password, dmtPath, extraArgs);
                         workers[i].start();
                     }
                     if (workers[i] != null && !workers[i].isRunning()) {
@@ -59,6 +66,7 @@ namespace dmt
         }
 
         private static string FindDMT() {
+            Console.WriteLine("Searching for DMT");
             string[] files = Directory.GetFiles(".\\", "FMDataMigration.exe", SearchOption.AllDirectories);
             if (files.Length > 0) {
                 return files[0];
@@ -72,38 +80,41 @@ namespace dmt
             return null;
         }
 
-        private static Worker GetWorker(string file, string username, string password, string dmtPath) 
+
+        private static Worker GetWorker(string file, string username, string password, string dmtPath, string extraArgs) 
         {
-                Regex r = new Regex("source\\\\(.*).fmp12", RegexOptions.IgnoreCase);
-                Match m = r.Match(file);
-                Group g = m.Groups[1];
-                String baseName = g.ToString();
-                String clone = "clone\\" + baseName + " Clone.fmp12";
-                String target = "target\\" + baseName + ".fmp12";
+            Regex r = new Regex("source\\\\(.*).fmp12", RegexOptions.IgnoreCase);
+            Match m = r.Match(file);
+            Group g = m.Groups[1];
+            String baseName = g.ToString();
+            String clone = "clone\\" + baseName + " Clone.fmp12";
+            String target = "target\\" + baseName + ".fmp12";
 
-                if (!File.Exists(clone))
-                {
-                    Console.WriteLine("Failed to find clone file: " + clone);
-                    return null;
-                }
+            if (!File.Exists(clone))
+            {
+                Console.WriteLine("Failed to find clone file: " + clone);
+                return null;
+            }
 
-                return new Worker(baseName, file, clone, target,  username, password, dmtPath);
+            return new Worker(baseName, file, clone, target,  username, password, dmtPath, extraArgs);
         }
 
         private static int getProccessCount()
         {
+            bool firstRun = true;
             int result = -1;
             while (result < 1 || result > 10) {
+                if (!firstRun) {
+                    Console.WriteLine("Please enter a number between 1 and 10 inclusive");
+                    firstRun = false;
+                }
                 Console.Write("Process Count: ");
                 string procCnt = Console.ReadLine();
                 try
                 {
                     result = Int32.Parse(procCnt);
-                }
-                catch (FormatException)
-                {
-                }
-                Console.WriteLine("Please enter a number between 1 and 10 inclusive");
+                } catch (FormatException){}
+                
             }
             return result;
         }
