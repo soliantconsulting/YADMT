@@ -36,7 +36,20 @@ namespace dmt
             
             Worker[] workers = new Worker[procCnt];
             bool allDone = false;
-            while (true) {
+            bool keepRunning = true;
+            Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) {
+                fileIndex = files.Length;
+                keepRunning = false;
+                e.Cancel = true;
+                
+                for (int i = 0; i < procCnt; i++) {
+                    if (workers[i] != null && workers[i].isRunning()) {
+                        workers[i].Dispose();
+                    }
+                }
+            };
+
+            while (keepRunning) {
                 for (int i = 0; i < procCnt; i++) {
                     if (workers[i] == null && fileIndex < files.Length) {
                         workers[i] = GetWorker(files[fileIndex++], username, password, dmtPath, extraArgs);

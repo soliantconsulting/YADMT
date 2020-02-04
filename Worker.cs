@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace dmt
 {
-    class Worker  : IDisposable
+    class Worker
     {
         private string file;
         private string source;
@@ -77,10 +77,9 @@ namespace dmt
             Console.Beep(800, 200);
         }
 
-        void IDisposable.Dispose()
+        public void Dispose()
         {
-            proc.Dispose();
-            t.Abort();
+            proc.Kill();
         }
 
         public bool isRunning() {
