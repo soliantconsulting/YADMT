@@ -9,7 +9,7 @@ using System.Collections;
 
 namespace dmt
 {
-    class Program
+    class DMTHelper
     {
         static void Main(string[] args)
         {
@@ -28,15 +28,17 @@ namespace dmt
             Console.Write("Password: ");
             string password = ReadPassword();
             Console.Write("\n");
-
-
             
             string[] files = Directory.GetFiles("source", "*.fmp12", SearchOption.TopDirectoryOnly);
+            Array.Sort(files, (x, y) => new FileInfo(y).Length.CompareTo(new FileInfo(x).Length));
+            
             int fileIndex = 0;
             
             Worker[] workers = new Worker[procCnt];
             bool allDone = false;
             bool keepRunning = true;
+
+            // if someone hits ctrl+c kill all the workers
             Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) {
                 fileIndex = files.Length;
                 keepRunning = false;
@@ -51,10 +53,12 @@ namespace dmt
 
             while (keepRunning) {
                 for (int i = 0; i < procCnt; i++) {
+                    //launch new workers if we can
                     if (workers[i] == null && fileIndex < files.Length) {
                         workers[i] = GetWorker(files[fileIndex++], username, password, dmtPath, extraArgs);
                         workers[i].start();
                     }
+                    //clean out finished workers
                     if (workers[i] != null && !workers[i].isRunning()) {
                         workers[i] = null;
                     }
@@ -70,6 +74,7 @@ namespace dmt
                     }
                 }
                 if (allDone) {
+                    // we have finished!
                     break;
                 }
                 Thread.Sleep(100);
