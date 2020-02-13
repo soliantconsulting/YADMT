@@ -13,12 +13,35 @@ namespace dmt
     {
         static void Main(string[] args)
         {
-            string dmtPath = FindDMT();
+            Console.WriteLine("DMTHelper Version 0.1");
+            Console.WriteLine("(c) 2020 Soliant Consulting, Inc");
+            Console.WriteLine("Instructions:");
+            Console.WriteLine("Needs Source, Clone, Target folders in current folder.");
+            Console.WriteLine("Needs DMT exe in subfolder of current/parent/sibling folder.");
+            Console.WriteLine("	You can optionally specify DMT exe path as the only argument.");
+            Console.WriteLine("Automatically specifies these DMT arguments; ");
+            Console.WriteLine("	-src_path, -clone_path, -target_path");
+            Console.WriteLine("	-src_account, -clone_account");
+            Console.WriteLine("	-src_pwd, -clone_pwd");
+            Console.WriteLine("Prompts for additional DMT arguments which can be any of these;");
+            Console.WriteLine("	-src_key, -clone_key");
+            Console.WriteLine("	-force, ");
+            Console.WriteLine("	-ignore_valuelists, -ignore_accounts, -ignore_fonts");
+            Console.WriteLine("	-v, -q");
+            Console.WriteLine("Prompts for process count (how many concurrent copies of DMT to run).");
+            Console.WriteLine("Prompts for account name and password.");
+            Console.WriteLine("Gets list of databases in Source and runs DMT for those that have a match in Clone.");
+            Console.WriteLine("The files are proccessed in descending size.");
+            Console.WriteLine("Creates log file for each target.");
+            Console.WriteLine("");
+
+            string dmtPath = FindDMT(args);
             if (dmtPath == null) {
                 Console.WriteLine("failed to find FMDataMigration.exe");
                 return;
             }
             Console.WriteLine("Found Data Migration tool at - " + dmtPath);
+            Console.WriteLine("");
             Console.Write("Extra DMT args: ");
             string extraArgs = Console.ReadLine();
             int procCnt = getProccessCount();
@@ -83,7 +106,11 @@ namespace dmt
             done();
         }
 
-        private static string FindDMT() {
+        private static string FindDMT(string [] args) {
+            if (args.Length > 0 && File.Exists(args[0])) {
+                return args[0];
+            }
+
             Console.WriteLine("Searching for DMT");
             string[] files = Directory.GetFiles(".\\", "FMDataMigration.exe", SearchOption.AllDirectories);
             if (files.Length > 0) {

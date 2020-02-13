@@ -53,8 +53,9 @@ namespace dmt
                 proc.StartInfo.FileName = this.dmtPath;
                 proc.StartInfo.CreateNoWindow = true;
                 proc.StartInfo.RedirectStandardOutput = true;
+                proc.StartInfo.RedirectStandardError = true;
                 proc.StartInfo.Arguments = "-src_path \""+source+"\" -clone_path \""+clone+"\" -target_path \""+target+"\"" +
-                    " -src_account \""+username+"\" -src_pwd \""+password+"\" -clone_account \""+username+"\" -clone_pwd \""+password+"\" -v "+extraArgs;
+                    " -src_account \""+username+"\" -src_pwd \""+password+"\" -clone_account \""+username+"\" -clone_pwd \""+password+"\" "+extraArgs;
                 proc.Start();
                 Console.WriteLine(file + " - " + DateTime.Now.ToString("HH:mm:ss") + " - Started");
                 StreamReader reader = proc.StandardOutput;
@@ -62,12 +63,15 @@ namespace dmt
 
 
                 while (!proc.HasExited) {
-                    Thread.Sleep(100);
+                    //Thread.Sleep(100);
                     line = reader.ReadLine();
                     Console.WriteLine(file + " - " + DateTime.Now.ToString("HH:mm:ss") + " - " + line);
-                    File.AppendAllText(outFileName,DateTime.Now.ToString("HH:mm:ss") + " - " + line + "\r\n");
-                    
+                    File.AppendAllText(outFileName,DateTime.Now.ToString("HH:mm:ss") + "\t" + line + "\r\n");
                 }
+                line = reader.ReadToEnd();
+                Console.WriteLine(line);
+                File.AppendAllText(outFileName,line + "\r\n");
+
             } catch (Exception e) {
                 running = false;
                 Console.Beep(800, 200);
