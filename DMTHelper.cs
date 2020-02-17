@@ -107,17 +107,24 @@ namespace dmt
         }
 
         private static string FindDMT(string [] args) {
+            Console.WriteLine("Seperator: " + Path.DirectorySeparatorChar);
+
             if (args.Length > 0 && File.Exists(args[0])) {
                 return args[0];
             }
 
+            String DMTExe = "FMDataMigration.exe";
+            if (Path.DirectorySeparatorChar == '/') {
+                DMTExe = "FMDataMigration";
+            }
+
             Console.WriteLine("Searching for DMT");
-            string[] files = Directory.GetFiles(".\\", "FMDataMigration.exe", SearchOption.AllDirectories);
+            string[] files = Directory.GetFiles("." + Path.DirectorySeparatorChar, DMTExe, SearchOption.AllDirectories);
             if (files.Length > 0) {
                 return files[0];
             }
 
-            files = Directory.GetFiles("..\\", "FMDataMigration.exe", SearchOption.AllDirectories);
+            files = Directory.GetFiles(".." + Path.DirectorySeparatorChar, DMTExe, SearchOption.AllDirectories);
             if (files.Length > 0) {
                 return files[0];
             }
@@ -128,12 +135,17 @@ namespace dmt
 
         private static Worker GetWorker(string file, string username, string password, string dmtPath, string extraArgs) 
         {
-            Regex r = new Regex("source\\\\(.*).fmp12", RegexOptions.IgnoreCase);
+            String regex = "source\\\\(.*).fmp12";
+            if (Path.DirectorySeparatorChar != '\\') {
+                regex = "source/(.*).fmp12";
+            }
+
+            Regex r = new Regex(regex, RegexOptions.IgnoreCase);
             Match m = r.Match(file);
             Group g = m.Groups[1];
             String baseName = g.ToString();
-            String clone = "clone\\" + baseName + " Clone.fmp12";
-            String target = "target\\" + baseName + ".fmp12";
+            String clone = "clone" + Path.DirectorySeparatorChar + baseName + " Clone.fmp12";
+            String target = "target" + Path.DirectorySeparatorChar + baseName + ".fmp12";
 
             if (!File.Exists(clone))
             {
@@ -189,6 +201,9 @@ namespace dmt
 
         public static string ReadPassword()
         {
+            if (Path.DirectorySeparatorChar == '/') {
+                return Console.ReadLine();
+            }
             IntPtr stdInputHandle = GetStdHandle(StdHandle.Input);
             if (stdInputHandle == IntPtr.Zero)
             {
@@ -221,7 +236,11 @@ namespace dmt
 
         public static void done()
         {
-            Process.Start(@"powershell", "-c (New-Object Media.SoundPlayer 'C:\\Windows\\media\\Alarm01.wav').PlaySync();");
+            if (Path.DirectorySeparatorChar == '\\') {
+                Process.Start(@"powershell", "-c (New-Object Media.SoundPlayer 'C:\\Windows\\media\\Alarm01.wav').PlaySync();");
+            } else {
+                Console.Beep(800, 200);
+            }
         }
     }
 }
