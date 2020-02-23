@@ -5,12 +5,83 @@ using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Collections;
+using System.Collections.Generic;
 
 namespace dmt
 {
     class DMTHelper
     {
+        static private Dictionary<string, string> getSettings(string[] args)
+        {
+            Dictionary<string, string> settings = new Dictionary<string, string>();
+            if (File.Exists("DMTHelper.ini")) {
+                foreach (var row in File.ReadAllLines("DMTHelper.ini"))
+                {
+                    if (row.IndexOf('=') > 0 && row.IndexOf(';') != 0)
+                    {
+                        string key = row.Split('=')[0];
+                        string val = row.Substring(row.IndexOf('=') + 1);
+
+                        if (key == "pass")
+                        {
+                            Console.WriteLine("INI: " + key + " : **********");
+                        } else
+                        {
+                            Console.WriteLine("INI: " + key + " :" + val);
+                        }
+
+                        settings.Add(key, val);
+                    }
+                }
+            }
+
+            string dmtPath;
+            if (!settings.ContainsKey("dmtPath")) {
+                dmtPath = FindDMT(args);
+                if (dmtPath == null) {
+                    Console.WriteLine("failed to find FMDataMigration.exe");
+                    System.Environment.Exit(-10);
+                }
+                settings.Add("dmtPath", dmtPath);
+            } else {
+                dmtPath = settings["dmtPath"];
+            }
+
+            Console.WriteLine("Found Data Migration tool at - " + dmtPath);
+            Console.WriteLine("");
+
+            if (!settings.ContainsKey("dmtArgs"))
+            {
+                Console.Write("Extra DMT args: ");
+                string extraArgs = Console.ReadLine();
+                settings.Add("dmtArgs", extraArgs);
+            }
+
+            if (!settings.ContainsKey("processCnt"))
+            {
+                int procCnt = getProccessCount();
+                settings.Add("processCnt", procCnt.ToString());
+            }
+
+            if (!settings.ContainsKey("user"))
+            {   
+                Console.Write("Username: ");
+                string username = Console.ReadLine();
+                settings.Add("user", username);
+            }
+
+            if (!settings.ContainsKey("pass"))
+            {
+                Console.Write("Password: ");
+                string password = ReadPassword();
+                Console.Write("\n");
+                settings.Add("pass", password);
+            }
+
+            return settings;
+        }
+
+
         static void Main(string[] args)
         {
             Console.WriteLine("DMTHelper Version 0.1");
@@ -35,28 +106,14 @@ namespace dmt
             Console.WriteLine("Creates log file for each target.");
             Console.WriteLine("");
 
-            string dmtPath = FindDMT(args);
-            if (dmtPath == null) {
-                Console.WriteLine("failed to find FMDataMigration.exe");
-                return;
-            }
-            Console.WriteLine("Found Data Migration tool at - " + dmtPath);
-            Console.WriteLine("");
-            Console.Write("Extra DMT args: ");
-            string extraArgs = Console.ReadLine();
-            int procCnt = getProccessCount();
-            Console.Write("Username: ");
-            string username = Console.ReadLine();
-            //Console.Write("\n");
-            Console.Write("Password: ");
-            string password = ReadPassword();
-            Console.Write("\n");
+            Dictionary<string, string> settings = getSettings(args);
             
             string[] files = Directory.GetFiles("source", "*.fmp12", SearchOption.TopDirectoryOnly);
             Array.Sort(files, (x, y) => new FileInfo(y).Length.CompareTo(new FileInfo(x).Length));
             
             int fileIndex = 0;
-            
+
+            int procCnt = Int32.Parse(settings["processCnt"]);
             Worker[] workers = new Worker[procCnt];
             bool allDone = false;
             bool keepRunning = true;
@@ -78,7 +135,7 @@ namespace dmt
                 for (int i = 0; i < procCnt; i++) {
                     //launch new workers if we can
                     if (workers[i] == null && fileIndex < files.Length) {
-                        workers[i] = GetWorker(files[fileIndex++], username, password, dmtPath, extraArgs);
+                        workers[i] = GetWorker(files[fileIndex++], settings["user"], settings["pass"], settings["dmtPath"], settings["dmtArgs"]);
                         workers[i].start();
                     }
                     //clean out finished workers

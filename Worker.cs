@@ -48,6 +48,11 @@ namespace dmt
                     File.Create(outFileName).Dispose();
                 }
 
+                if (!Directory.Exists("target"))
+                {
+                    Directory.CreateDirectory("target");
+                }
+
                 proc = new Process();
                 proc.StartInfo.UseShellExecute = false;
                 proc.StartInfo.FileName = this.dmtPath;
