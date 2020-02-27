@@ -9,5 +9,5 @@
     [assembly: AssemblyCopyright("Copyright © 2020 Soliant Consulting, Inc")]
     [assembly: AssemblyTrademark("")]
     [assembly: AssemblyCulture("")]
-    [assembly: AssemblyVersion("0.1.0")]
-    [assembly: AssemblyFileVersion("0.1.0")]
+    [assembly: AssemblyVersion(dmt.DMTHelper.VERSION)]
+    [assembly: AssemblyFileVersion(dmt.DMTHelper.VERSION)]

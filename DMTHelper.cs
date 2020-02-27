@@ -11,6 +11,8 @@ namespace dmt
 {
     class DMTHelper
     {
+        public const string VERSION = "0.2.0";
+
         static private Dictionary<string, string> getSettings(string[] args)
         {
             Dictionary<string, string> settings = new Dictionary<string, string>();
@@ -39,13 +41,14 @@ namespace dmt
             if (!settings.ContainsKey("dmtPath")) {
                 dmtPath = FindDMT(args);
                 if (dmtPath == null) {
-                    Console.WriteLine("failed to find FMDataMigration.exe");
+                    Console.WriteLine("failed to find FMDataMigration");
                     System.Environment.Exit(-10);
                 }
                 settings.Add("dmtPath", dmtPath);
             } else {
                 dmtPath = settings["dmtPath"];
             }
+            UpdateChecks.checkForUpdates(dmtPath).ConfigureAwait(false);
 
             Console.WriteLine("Found Data Migration tool at - " + dmtPath);
             Console.WriteLine("");
@@ -82,9 +85,9 @@ namespace dmt
         }
 
 
-        static void Main(string[] args)
+        static void  Main(string[] args)
         {
-            Console.WriteLine("DMTHelper Version 0.1");
+            Console.WriteLine("DMTHelper Version " + dmt.DMTHelper.VERSION);
             Console.WriteLine("(c) 2020 Soliant Consulting, Inc");
             Console.WriteLine("Instructions:");
             Console.WriteLine("Needs Source, Clone, Target folders in current folder.");
@@ -164,8 +167,6 @@ namespace dmt
         }
 
         private static string FindDMT(string [] args) {
-            Console.WriteLine("Seperator: " + Path.DirectorySeparatorChar);
-
             if (args.Length > 0 && File.Exists(args[0])) {
                 return args[0];
             }
