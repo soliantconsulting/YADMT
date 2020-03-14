@@ -8,7 +8,7 @@ namespace dmt
 {
     class Worker
     {
-        private string file;
+        public string file { get; private set; }
         private string source;
         private string clone;
         private string target;
@@ -25,7 +25,15 @@ namespace dmt
 
         private Process proc;
 
-        public Worker(string file, string source, string clone, string target, string username, string password, string dmtPath, string extraArgs) {
+        public DateTime startTime { get; private set; }
+
+        public DateTime endTime { get; private set; }
+
+        public long fileSize { get; private set; }
+
+        public int fileNumber { get; private set; }
+
+        public Worker(string file, string source, string clone, string target, string username, string password, string dmtPath, string extraArgs, int fileNumber) {
             this.dmtPath = dmtPath;
             this.file = escape(file);
             this.source = escape(source);
@@ -34,6 +42,7 @@ namespace dmt
             this.username = escape(username);
             this.password = escape(password);
             this.extraArgs = extraArgs;
+            this.fileNumber = fileNumber;
         }
 
         private static string escape(string raw) {
@@ -42,6 +51,8 @@ namespace dmt
         }
 
         public void ThreadProc() {
+            this.startTime = DateTime.Now;
+
             String outFileName = file + ".txt";
             try {
                 if (!File.Exists(outFileName)) {
@@ -82,6 +93,16 @@ namespace dmt
                 Console.Beep(800, 200);
                 throw e;
             }
+            this.endTime = DateTime.Now;
+
+            this.fileSize = -1;
+            try {
+                FileInfo info = new FileInfo(this.target);
+                this.fileSize = info.Length;
+            } catch (Exception) {
+
+            }
+
             running = false;
             Console.Beep(800, 200);
         }

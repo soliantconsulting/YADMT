@@ -11,7 +11,9 @@ namespace dmt
 {
     class DMTHelper
     {
-        public const string VERSION = "0.2.0";
+        public const string VERSION = "0.3.0";
+
+        private static ExecutionInfo[] infos;
 
         static private Dictionary<string, string> getSettings(string[] args)
         {
@@ -85,7 +87,7 @@ namespace dmt
         }
 
 
-        static void  Main(string[] args)
+        static void Main(string[] args)
         {
             Console.WriteLine("DMTHelper Version " + dmt.DMTHelper.VERSION);
             Console.WriteLine("(c) 2020 Soliant Consulting, Inc");
@@ -113,6 +115,7 @@ namespace dmt
             
             string[] files = Directory.GetFiles("source", "*.fmp12", SearchOption.TopDirectoryOnly);
             Array.Sort(files, (x, y) => new FileInfo(y).Length.CompareTo(new FileInfo(x).Length));
+            infos = new ExecutionInfo[files.Length];
             
             int fileIndex = 0;
 
@@ -138,11 +141,13 @@ namespace dmt
                 for (int i = 0; i < procCnt; i++) {
                     //launch new workers if we can
                     if (workers[i] == null && fileIndex < files.Length) {
-                        workers[i] = GetWorker(files[fileIndex++], settings["user"], settings["pass"], settings["dmtPath"], settings["dmtArgs"]);
+                        workers[i] = GetWorker(files[fileIndex], settings["user"], settings["pass"], settings["dmtPath"], settings["dmtArgs"], fileIndex++);
                         workers[i].start();
                     }
                     //clean out finished workers
                     if (workers[i] != null && !workers[i].isRunning()) {
+                        Worker w = workers[i];
+                        infos[w.fileNumber] = new ExecutionInfo(w.file, w.fileSize, w.startTime, w.endTime, i, w.fileNumber);
                         workers[i] = null;
                     }
                 }
@@ -161,6 +166,11 @@ namespace dmt
                     break;
                 }
                 Thread.Sleep(100);
+            }
+
+            Console.WriteLine("#\tThread\tFile\tSize(b)\tstart\tfinished\tduration");
+            for (int i = 0; i < infos.Length; i++) {
+                Console.WriteLine(infos[i]);
             }
 
             done();
@@ -191,7 +201,7 @@ namespace dmt
         }
 
 
-        private static Worker GetWorker(string file, string username, string password, string dmtPath, string extraArgs) 
+        private static Worker GetWorker(string file, string username, string password, string dmtPath, string extraArgs, int fileIndex) 
         {
             String regex = "source\\\\(.*).fmp12";
             if (Path.DirectorySeparatorChar != '\\') {
@@ -211,7 +221,7 @@ namespace dmt
                 return null;
             }
 
-            return new Worker(baseName, file, clone, target,  username, password, dmtPath, extraArgs);
+            return new Worker(baseName, file, clone, target,  username, password, dmtPath, extraArgs, fileIndex);
         }
 
         private static int getProccessCount()
@@ -299,6 +309,34 @@ namespace dmt
             } else {
                 Console.Beep(800, 200);
             }
+        }
+    }
+
+    class ExecutionInfo {
+        public string fileName;
+        public long fileSize;
+        public DateTime startTime;
+        public DateTime endTime;
+        public int threadNumber;
+        public int fileNumber;
+
+        public ExecutionInfo(string fileName, long FileSize, DateTime startTime, DateTime endTime, int threadNumber, int fileNumber) {
+            this.fileName = fileName;
+            this.fileSize = FileSize;
+            this.startTime = startTime;
+            this.endTime = endTime;
+            this.threadNumber = threadNumber;
+            this.fileNumber = fileNumber;
+        }
+
+        public override string ToString() {
+            TimeSpan d = this.endTime - this.startTime;
+            return this.fileNumber + "\t" + this.threadNumber + "\t" + this.fileName + "\t" + this.fileSize + "\t" 
+                + formatDate(this.startTime) + "\t" + formatDate(this.endTime) + "\t" + d.ToString();
+        }
+
+        private string formatDate(DateTime date) {
+            return date.ToString("HH:mm:ss.f");
         }
     }
 }
