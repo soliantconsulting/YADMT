@@ -11,7 +11,7 @@ namespace dmt
 {
     class DMTHelper
     {
-        public const string VERSION = "0.3.0";
+        public const string VERSION = "0.3.1";
 
         private static ExecutionInfo[] infos;
 
@@ -142,7 +142,9 @@ namespace dmt
                     //launch new workers if we can
                     if (workers[i] == null && fileIndex < files.Length) {
                         workers[i] = GetWorker(files[fileIndex], settings["user"], settings["pass"], settings["dmtPath"], settings["dmtArgs"], fileIndex++);
-                        workers[i].start();
+                        if (workers[i] != null) {
+                            workers[i].start();
+                        }
                     }
                     //clean out finished workers
                     if (workers[i] != null && !workers[i].isRunning()) {
@@ -168,10 +170,23 @@ namespace dmt
                 Thread.Sleep(100);
             }
 
-            Console.WriteLine("#\tThread\tFile\tSize(b)\tstart\tfinished\tduration");
-            for (int i = 0; i < infos.Length; i++) {
-                Console.WriteLine(infos[i]);
+            string outFile = "DMTHelper.log";
+            string output = "";
+            string header = "#\tThread\tFile\tSize(b)\tstart\tfinished\tduration";
+            if (!File.Exists(outFile)) {
+                File.Create(outFile).Dispose();
+                output = header + "\r\n";
             }
+            
+            Console.WriteLine(header);
+            for (int i = 0; i < infos.Length; i++) {
+                if (infos[i] != null) {
+                    Console.WriteLine(infos[i]);
+                    output += infos[i].ToString() + "\r\n";
+                }
+            }
+
+            File.AppendAllText(outFile,output);
 
             done();
         }
