@@ -6,14 +6,17 @@ using System.Runtime.InteropServices;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Media;
 
 namespace dmt
 {
     class DMTHelper
     {
-        public const string VERSION = "0.3.1";
+        public const string VERSION = "0.4.0";
 
         private static ExecutionInfo[] infos;
+
+        private static SoundPlayer player;
 
         static private Dictionary<string, string> getSettings(string[] args)
         {
@@ -112,6 +115,7 @@ namespace dmt
             Console.WriteLine("");
 
             Dictionary<string, string> settings = getSettings(args);
+            InitializeSound();
             
             string[] files = Directory.GetFiles("source", "*.fmp12", SearchOption.TopDirectoryOnly);
             Array.Sort(files, (x, y) => new FileInfo(y).Length.CompareTo(new FileInfo(x).Length));
@@ -137,6 +141,7 @@ namespace dmt
                 }
             };
 
+            DateTime startTime = DateTime.Now;
             while (keepRunning) {
                 for (int i = 0; i < procCnt; i++) {
                     //launch new workers if we can
@@ -169,23 +174,37 @@ namespace dmt
                 }
                 Thread.Sleep(100);
             }
+            DateTime endTime = DateTime.Now;
 
             string outFile = "DMTHelper.log";
             string output = "";
-            string header = "#\tThread\tFile\tSize(b)\tstart\tfinished\tduration";
+            string header = "#\tProces\tFile\tSize(b)\tstart\tfinished\tduration";
             if (!File.Exists(outFile)) {
                 File.Create(outFile).Dispose();
                 output = header + "\r\n";
             }
+
             
-            Console.WriteLine(header);
+            int fileCnt = 0;
+            int procCntUsed = 0;
+            long totalFileSize = 0;
+            
+            
             for (int i = 0; i < infos.Length; i++) {
                 if (infos[i] != null) {
-                    Console.WriteLine(infos[i]);
+                    fileCnt++;
+                    if (infos[i].threadNumber > procCntUsed) {
+                        procCntUsed = infos[i].threadNumber;
+                    }
+                    totalFileSize += infos[i].fileSize;
                     output += infos[i].ToString() + "\r\n";
                 }
             }
-
+            output += "----\t----\t--------\t--------\t--------\t--------\t--------\r\n";
+            TimeSpan d = endTime - startTime;
+            output += fileCnt + "\t" + (procCntUsed+1) + "\t-\t" + totalFileSize + "\t" + startTime.ToString("HH:mm:ss.f") +
+                    "\t" + endTime.ToString("HH:mm:ss.f") + "\t" + d.ToString() + "\r\n";
+            Console.WriteLine(output);
             File.AppendAllText(outFile,output);
 
             done();
@@ -317,10 +336,18 @@ namespace dmt
             return password;
         }
 
+        private static void InitializeSound()
+        {
+            // Create an instance of the SoundPlayer class.
+            player = new SoundPlayer();
+            player.SoundLocation = "C:\\Windows\\media\\Alarm01.wav";
+            player.Load();
+        }
+
         public static void done()
         {
             if (Path.DirectorySeparatorChar == '\\') {
-                Process.Start(@"powershell", "-c (New-Object Media.SoundPlayer 'C:\\Windows\\media\\Alarm01.wav').PlaySync();");
+                player.PlaySync();
             } else {
                 Console.Beep(800, 200);
             }
@@ -328,12 +355,12 @@ namespace dmt
     }
 
     class ExecutionInfo {
-        public string fileName;
-        public long fileSize;
-        public DateTime startTime;
-        public DateTime endTime;
-        public int threadNumber;
-        public int fileNumber;
+        public string fileName { get; private set; }
+        public long fileSize { get; private set; }
+        public DateTime startTime { get; private set; }
+        public DateTime endTime { get; private set; }
+        public int threadNumber { get; private set; }
+        public int fileNumber { get; private set; }
 
         public ExecutionInfo(string fileName, long FileSize, DateTime startTime, DateTime endTime, int threadNumber, int fileNumber) {
             this.fileName = fileName;
@@ -346,7 +373,7 @@ namespace dmt
 
         public override string ToString() {
             TimeSpan d = this.endTime - this.startTime;
-            return this.fileNumber + "\t" + this.threadNumber + "\t" + this.fileName + "\t" + this.fileSize + "\t" 
+            return (this.fileNumber+1) + "\t" + (this.threadNumber+1) + "\t" + this.fileName + "\t" + this.fileSize + "\t" 
                 + formatDate(this.startTime) + "\t" + formatDate(this.endTime) + "\t" + d.ToString();
         }
 
