@@ -12,13 +12,13 @@ namespace dmt
 {
     class DMTHelper
     {
-        public const string VERSION = "0.4.0";
+        public const string VERSION = "0.5.0";
 
         private static ExecutionInfo[] infos;
 
         private static SoundPlayer player;
 
-        static private Dictionary<string, string> getSettings(string[] args)
+        static private Dictionary<string, string> GetSettings(string[] args)
         {
             Dictionary<string, string> settings = new Dictionary<string, string>();
             if (File.Exists("DMTHelper.ini")) {
@@ -86,6 +86,27 @@ namespace dmt
                 settings.Add("pass", password);
             }
 
+            if (!settings.ContainsKey("hasPrefix")) {
+                Console.WriteLine("Do your clone or source files have a Prefix or Suffix like dev or uat?");
+                Console.Write("(p)refix (s)uffix (n)either: ");
+                string hasPrefix = Console.ReadLine().ToLower();
+                if (hasPrefix.Length > 1) {
+                    hasPrefix = hasPrefix.Substring(1);
+                }
+                settings.Add("hasPrefix", hasPrefix);
+            }
+
+            if (settings["hasPrefix"] == "p" || settings["hasPrefix"] == "s") {
+                string extraType = settings["hasPrefix"] == "p" ? "Prefix" : "Suffix";
+                Console.Write("Enter your clone " + extraType + " or return if there is none: ");
+                string cloneExtra = Console.ReadLine();
+                settings.Add("cloneExtra", cloneExtra);
+                Console.Write("Enter your source " + extraType + " or return if there is none: ");
+                string sourceExtra = Console.ReadLine();
+                settings.Add("sourceExtra", sourceExtra);
+            }
+
+
             return settings;
         }
 
@@ -114,10 +135,10 @@ namespace dmt
             Console.WriteLine("Creates log file for each target.");
             Console.WriteLine("");
 
-            Dictionary<string, string> settings = getSettings(args);
+            Dictionary<string, string> settings = GetSettings(args);
             InitializeSound();
             
-            string[] files = Directory.GetFiles("source", "*.fmp12", SearchOption.TopDirectoryOnly);
+            string[] files = Directory.GetFiles("source", DMTHelper.FindFileWildcard(settings), SearchOption.TopDirectoryOnly);
             Array.Sort(files, (x, y) => new FileInfo(y).Length.CompareTo(new FileInfo(x).Length));
             infos = new ExecutionInfo[files.Length];
             
@@ -146,7 +167,7 @@ namespace dmt
                 for (int i = 0; i < procCnt; i++) {
                     //launch new workers if we can
                     if (workers[i] == null && fileIndex < files.Length) {
-                        workers[i] = GetWorker(files[fileIndex], settings["user"], settings["pass"], settings["dmtPath"], settings["dmtArgs"], fileIndex++);
+                        workers[i] = GetWorker(files[fileIndex], settings, fileIndex++);
                         if (workers[i] != null) {
                             workers[i].start();
                         }
@@ -210,6 +231,22 @@ namespace dmt
             done();
         }
 
+        private static string FindFileWildcard(Dictionary<string, string> settings) {
+            String pattern = "*.fmp12";
+            if (
+                settings.ContainsKey("sourceExtra") 
+                && settings["sourceExtra"] != ""
+            ) {
+                if (settings["hasPrefix"] == "p") {
+                    pattern = settings["sourceExtra"] + pattern;
+                }
+                else if (settings["hasPrefix"] == "s") {
+                    pattern = ".*"+settings["sourceExtra"]+".fmp12";
+                }
+            }
+            return pattern;
+        }
+
         private static string FindDMT(string [] args) {
             if (args.Length > 0 && File.Exists(args[0])) {
                 return args[0];
@@ -235,19 +272,17 @@ namespace dmt
         }
 
 
-        private static Worker GetWorker(string file, string username, string password, string dmtPath, string extraArgs, int fileIndex) 
+        private static Worker GetWorker(string file, Dictionary<string, string> settings, int fileIndex) 
         {
-            String regex = "source\\\\(.*).fmp12";
-            if (Path.DirectorySeparatorChar != '\\') {
-                regex = "source/(.*).fmp12";
-            }
+            string regex = DMTHelper.FileRegex(settings);
 
             Regex r = new Regex(regex, RegexOptions.IgnoreCase);
             Match m = r.Match(file);
             Group g = m.Groups[1];
             String baseName = g.ToString();
-            String clone = "clone" + Path.DirectorySeparatorChar + baseName + " Clone.fmp12";
-            String target = "target" + Path.DirectorySeparatorChar + baseName + ".fmp12";
+            String cloneBaseName = DMTHelper.CloneName(baseName, settings);
+            String clone = "clone" + Path.DirectorySeparatorChar + cloneBaseName + " Clone.fmp12";
+            String target = "target" + Path.DirectorySeparatorChar + cloneBaseName + ".fmp12";
 
             if (!File.Exists(clone))
             {
@@ -255,7 +290,46 @@ namespace dmt
                 return null;
             }
 
-            return new Worker(baseName, file, clone, target,  username, password, dmtPath, extraArgs, fileIndex);
+            return new Worker(baseName, file, clone, target,  settings["user"], settings["pass"], settings["dmtPath"], settings["dmtArgs"], fileIndex);
+        }
+
+        private static string CloneName(string baseName, Dictionary<string, string> settings) {
+            String clone = baseName;
+            if (
+                settings.ContainsKey("cloneExtra") 
+                && settings["cloneExtra"] != ""
+            ) {
+                if (settings["hasPrefix"] == "p") {
+                    clone = settings["cloneExtra"] + baseName;
+                }
+                else if (settings["hasPrefix"] == "s") {
+                    clone = baseName+settings["cloneExtra"];
+                }
+            }
+            return clone;
+        }
+
+        private static string FileRegex(Dictionary<string, string> settings) 
+        {
+            String regex = "(.*).fmp12";
+            if (
+                settings.ContainsKey("sourceExtra") 
+                && settings["sourceExtra"] != ""
+            ) {
+                if (settings["hasPrefix"] == "p") {
+                    regex = settings["sourceExtra"] + regex;
+                }
+                else if (settings["hasPrefix"] == "s") {
+                    regex = "(.*)"+settings["sourceExtra"]+".fmp12";
+                }
+            }
+
+            regex = "source\\\\" + regex;
+            if (Path.DirectorySeparatorChar != '\\') {
+                regex = "source/" + regex;
+            }
+
+            return regex;
         }
 
         private static int getProccessCount()
