@@ -12,7 +12,7 @@ namespace dmt
 {
     class DMTHelper
     {
-        public const string VERSION = "0.5.0";
+        public const string VERSION = "0.5.1";
 
         private static ExecutionInfo[] infos;
 
@@ -98,12 +98,16 @@ namespace dmt
 
             if (settings["hasPrefix"] == "p" || settings["hasPrefix"] == "s") {
                 string extraType = settings["hasPrefix"] == "p" ? "Prefix" : "Suffix";
-                Console.Write("Enter your clone " + extraType + " or return if there is none: ");
-                string cloneExtra = Console.ReadLine();
-                settings.Add("cloneExtra", cloneExtra);
-                Console.Write("Enter your source " + extraType + " or return if there is none: ");
-                string sourceExtra = Console.ReadLine();
-                settings.Add("sourceExtra", sourceExtra);
+                if (!settings.ContainsKey("cloneExtra")) {
+                    Console.Write("Enter your clone " + extraType + " or return if there is none: ");
+                    string cloneExtra = Console.ReadLine();
+                    settings.Add("cloneExtra", cloneExtra);
+                }
+                if (!settings.ContainsKey("sourceExtra")) {
+                    Console.Write("Enter your source " + extraType + " or return if there is none: ");
+                    string sourceExtra = Console.ReadLine();
+                    settings.Add("sourceExtra", sourceExtra);
+                }
             }
 
 
