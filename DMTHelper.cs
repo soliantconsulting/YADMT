@@ -12,7 +12,7 @@ namespace dmt
 {
     class DMTHelper
     {
-        public const string VERSION = "0.5.1";
+        public const string VERSION = "0.5.2";
 
         private static ExecutionInfo[] infos;
 
@@ -203,10 +203,12 @@ namespace dmt
 
             string outFile = "DMTHelper.log";
             string output = "";
-            string header = "#\tProces\tFile\tSize(b)\tstart\tfinished\tduration";
+            string header = "#\tProces\tFile\tSize(b)\tstart\tfinish\tduration";
             if (!File.Exists(outFile)) {
                 File.Create(outFile).Dispose();
                 output = header + "\r\n";
+            } else {
+                Console.WriteLine(header);
             }
 
             
@@ -229,6 +231,7 @@ namespace dmt
             TimeSpan d = endTime - startTime;
             output += fileCnt + "\t" + (procCntUsed+1) + "\t-\t" + totalFileSize + "\t" + startTime.ToString("HH:mm:ss.f") +
                     "\t" + endTime.ToString("HH:mm:ss.f") + "\t" + d.ToString() + "\r\n";
+            output += "----\t----\t--------\t--------\t--------\t--------\t--------\r\n";
             Console.WriteLine(output);
             File.AppendAllText(outFile,output);
 

@@ -53,7 +53,7 @@ namespace dmt
         public void ThreadProc() {
             this.startTime = DateTime.Now;
 
-            String outFileName = file + ".txt";
+            String outFileName = file + ".log";
             try {
                 if (!File.Exists(outFileName)) {
                     File.Create(outFileName).Dispose();
