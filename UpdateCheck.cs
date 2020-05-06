@@ -15,7 +15,7 @@ namespace dmt
 
         static string home = (Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX)
                     ? Environment.GetEnvironmentVariable("HOME") : Environment.ExpandEnvironmentVariables("%USERPROFILE%");
-        static string dmtHome = home + Path.DirectorySeparatorChar + ".DMTHelper";
+        static string dmtHome = home + Path.DirectorySeparatorChar + ".YADMT";
         static string dmtVersionCache = dmtHome + Path.DirectorySeparatorChar + "version.txt";
 
         public static async Task checkForUpdates(string dmtPath) {
@@ -25,7 +25,7 @@ namespace dmt
             string responseBody = checkCache();
             try {
                 if (responseBody == null) {
-                    responseBody = await client.GetStringAsync("https://bengert.dev-app01.soliantconsulting.com/dmt.txt");
+                    responseBody = await client.GetStringAsync("https://raw.githubusercontent.com/soliantconsulting/YADMT/master/dmt.txt");
                     File.WriteAllText(dmtVersionCache, responseBody, Encoding.UTF8);
                 }
                 checkVersions(dmtPath, responseBody);
@@ -51,9 +51,9 @@ namespace dmt
             ConsoleColor bgColor = Console.BackgroundColor;
             ConsoleColor fgColor = Console.ForegroundColor;
             string[] versionArr = versions.Split(':');
-            if (new Version(DMTHelper.VERSION) < new Version(versionArr[0])) {
+            if (new Version(YADMT.VERSION) < new Version(versionArr[0])) {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("There is a newer version of the DMTHelper tool");
+                Console.WriteLine("There is a newer version of the YADMT tool");
                 Console.ForegroundColor = fgColor;
             }
 
