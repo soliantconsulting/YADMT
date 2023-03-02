@@ -47,6 +47,7 @@ namespace dmt
                 dmtPath = FindDMT(args);
                 if (dmtPath == null) {
                     Console.WriteLine("failed to find FMDataMigration");
+                    Console.WriteLine("Please download the FileMaker data migration tool https://community.claris.com/en/s/article/FileMaker-data-migration-tool");
                     System.Environment.Exit(-10);
                 }
                 settings.Add("dmtPath", dmtPath);
@@ -65,7 +66,7 @@ namespace dmt
             }
 
             if (!settings.ContainsKey("user"))
-            {   
+            {
                 Console.Write("Username: ");
                 string username = Console.ReadLine();
                 settings.Add("user", username);
@@ -117,7 +118,7 @@ namespace dmt
         static void Main(string[] args)
         {
             Console.WriteLine("YADMT Version " + dmt.YADMT.VERSION);
-            Console.WriteLine("(c) 2020 Soliant Consulting, Inc");
+            Console.WriteLine("(c) 2023 Soliant Consulting, Inc");
             Console.WriteLine("Instructions:");
             Console.WriteLine("Needs Source and Clone folders in current folder.");
             Console.WriteLine("Needs DMT exe in subfolder of current/parent/sibling folder.");
@@ -141,11 +142,12 @@ namespace dmt
 
             Dictionary<string, string> settings = GetSettings(args);
             InitializeSound();
-            
+            CheckDirectoriesExist();
+
             string[] files = Directory.GetFiles("source", YADMT.FindFileWildcard(settings), SearchOption.TopDirectoryOnly);
             Array.Sort(files, (x, y) => new FileInfo(y).Length.CompareTo(new FileInfo(x).Length));
             infos = new ExecutionInfo[files.Length];
-            
+
             int fileIndex = 0;
 
             int procCnt = Int32.Parse(settings["processCnt"]);
@@ -158,7 +160,7 @@ namespace dmt
                 fileIndex = files.Length;
                 keepRunning = false;
                 e.Cancel = true;
-                
+
                 for (int i = 0; i < procCnt; i++) {
                     if (workers[i] != null && workers[i].isRunning()) {
                         workers[i].Dispose();
@@ -211,12 +213,12 @@ namespace dmt
                 Console.WriteLine(header);
             }
 
-            
+
             int fileCnt = 0;
             int procCntUsed = 0;
             long totalFileSize = 0;
-            
-            
+
+
             for (int i = 0; i < infos.Length; i++) {
                 if (infos[i] != null) {
                     fileCnt++;
@@ -238,10 +240,19 @@ namespace dmt
             done();
         }
 
+        private static void CheckDirectoriesExist() {
+            if (!Directory.Exists("source")) {
+                Directory.CreateDirectory("source");
+            }
+            if (!Directory.Exists("clone")) {
+                Directory.CreateDirectory("clone");
+            }
+        }
+
         private static string FindFileWildcard(Dictionary<string, string> settings) {
             String pattern = "*.fmp12";
             if (
-                settings.ContainsKey("sourceExtra") 
+                settings.ContainsKey("sourceExtra")
                 && settings["sourceExtra"] != ""
             ) {
                 if (settings["hasPrefix"] == "p") {
@@ -259,27 +270,30 @@ namespace dmt
                 return args[0];
             }
 
-            String DMTExe = "FMDataMigration.exe";
-            if (Path.DirectorySeparatorChar == '/') {
-                DMTExe = "FMDataMigration";
-            }
+            try {
+                String DMTExe = "FMDataMigration.exe";
+                if (Path.DirectorySeparatorChar == '/') {
+                    DMTExe = "FMDataMigration";
+                }
 
-            Console.WriteLine("Searching for DMT");
-            string[] files = Directory.GetFiles("." + Path.DirectorySeparatorChar, DMTExe, SearchOption.AllDirectories);
-            if (files.Length > 0) {
-                return files[0];
-            }
+                Console.WriteLine("Searching for DMT");
+                string[] files = Directory.GetFiles("." + Path.DirectorySeparatorChar, DMTExe, SearchOption.AllDirectories);
+                if (files.Length > 0) {
+                    return files[0];
+                }
 
-            files = Directory.GetFiles(".." + Path.DirectorySeparatorChar, DMTExe, SearchOption.AllDirectories);
-            if (files.Length > 0) {
-                return files[0];
+                files = Directory.GetFiles(".." + Path.DirectorySeparatorChar, DMTExe, SearchOption.AllDirectories);
+                if (files.Length > 0) {
+                    return files[0];
+                }
+            } catch (Exception){
             }
 
             return null;
         }
 
 
-        private static Worker GetWorker(string file, Dictionary<string, string> settings, int fileIndex) 
+        private static Worker GetWorker(string file, Dictionary<string, string> settings, int fileIndex)
         {
             string regex = YADMT.FileRegex(settings);
 
@@ -303,7 +317,7 @@ namespace dmt
         private static string CloneName(string baseName, Dictionary<string, string> settings) {
             String clone = baseName;
             if (
-                settings.ContainsKey("cloneExtra") 
+                settings.ContainsKey("cloneExtra")
                 && settings["cloneExtra"] != ""
             ) {
                 if (settings["hasPrefix"] == "p") {
@@ -316,11 +330,11 @@ namespace dmt
             return clone;
         }
 
-        private static string FileRegex(Dictionary<string, string> settings) 
+        private static string FileRegex(Dictionary<string, string> settings)
         {
             String regex = "(.*).fmp12";
             if (
-                settings.ContainsKey("sourceExtra") 
+                settings.ContainsKey("sourceExtra")
                 && settings["sourceExtra"] != ""
             ) {
                 if (settings["hasPrefix"] == "p") {
@@ -354,7 +368,7 @@ namespace dmt
                 {
                     result = Int32.Parse(procCnt);
                 } catch (FormatException){}
-                
+
             }
             return result;
         }
@@ -454,7 +468,7 @@ namespace dmt
 
         public override string ToString() {
             TimeSpan d = this.endTime - this.startTime;
-            return (this.fileNumber+1) + "\t" + (this.threadNumber+1) + "\t" + this.fileName + "\t" + this.fileSize + "\t" 
+            return (this.fileNumber+1) + "\t" + (this.threadNumber+1) + "\t" + this.fileName + "\t" + this.fileSize + "\t"
                 + formatDate(this.startTime) + "\t" + formatDate(this.endTime) + "\t" + d.ToString();
         }
 

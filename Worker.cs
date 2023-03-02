@@ -50,6 +50,16 @@ namespace dmt
             return pattern.Replace(raw, "\"\"\"");
         }
 
+        static String BytesToString(long byteCount) {
+            string[] suf = { "B", "KB", "MB", "GB", "TB", "PB", "EB" }; //Longs run out around EB
+            if (byteCount == 0)
+                return "0" + suf[0];
+            long bytes = Math.Abs(byteCount);
+            int place = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
+            double num = Math.Round(bytes / Math.Pow(1024, place), 1);
+            return (Math.Sign(byteCount) * num).ToString() + suf[place];
+        }
+
         public void ThreadProc() {
             this.startTime = DateTime.Now;
 
@@ -77,17 +87,30 @@ namespace dmt
                 StreamReader reader = proc.StandardOutput;
                 string line = null;
 
-
+                long outSize = 0;
                 while (!proc.HasExited) {
                     //Thread.Sleep(100);
                     line = reader.ReadLine();
-                    Console.WriteLine(file + " - " + DateTime.Now.ToString("HH:mm:ss") + " - " + line);
-                    File.AppendAllText(outFileName,DateTime.Now.ToString("HH:mm:ss") + "\t" + line + "\r\n");
+                    String currentTimestamp = DateTime.Now.ToString("HH:mm:ss");
+                    if (
+                        line.StartsWith(" == Mapping fields in source table")//table
+                        || line.StartsWith(" == Summary ==")
+                    ) {
+                        try {
+                            FileInfo fi = new FileInfo(target);
+                            fi.Refresh();
+                            Console.WriteLine(file + " - " + currentTimestamp + " - File Size in Bytes: " + fi.Length + " change: " + BytesToString(fi.Length-outSize));
+                            File.AppendAllText(outFileName, currentTimestamp + "\t" + " - File Size in Bytes: " + fi.Length + " change: " + BytesToString(fi.Length-outSize) + "\r\n");
+                            outSize = fi.Length;
+                        } catch (Exception) {
+                        }
+                    }
+                    Console.WriteLine(file + " - " + currentTimestamp + " - " + line);
+                    File.AppendAllText(outFileName, currentTimestamp + "\t" + line + "\r\n");
                 }
                 line = reader.ReadToEnd();
                 Console.WriteLine(line);
-                File.AppendAllText(outFileName,line + "\r\n");
-
+                File.AppendAllText(outFileName, line + "\r\n");
             } catch (Exception e) {
                 running = false;
                 Console.Beep(800, 200);
@@ -117,7 +140,6 @@ namespace dmt
         }
 
         public void start() {
-
             this.t = new Thread(new ThreadStart(ThreadProc));
             this.t.Start();
             this.running = true;
